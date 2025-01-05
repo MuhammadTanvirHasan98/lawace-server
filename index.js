@@ -4,10 +4,48 @@ require("dotenv").config();
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
+const nodemailer = require("nodemailer");
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 3000;
+
+const sendEmail = (emailAddress, emailData) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true for port 465, false for other ports
+    auth: {
+      user: process.env.TRANSPORTER_EMAIL,
+      pass: process.env.TRANSPORTER_PASS,
+    },
+  });
+
+  // verify connection configuration
+  transporter.verify(function (error, success) {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Server is ready to take our messages");
+    }
+  });
+
+  const mailBody = {
+    from: `"Lawace" <${process.env.TRANSPORTER_EMAIL}>`, // sender address
+    to: emailAddress, // list of receivers
+    subject: emailData.subject, // Subject line
+    html: emailData.message, // html body
+  };
+
+  transporter.sendMail(mailBody, (error, info) => {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Email Sent:" + info.response);
+    }
+  });
+};
 
 //middlewares
 app.use(cors());
@@ -116,6 +154,76 @@ async function run() {
     app.get("/lawyer/:email", async (req, res) => {
       const lawyer_email = req.params.email;
       const result = await lawyerCollection.findOne({ lawyer_email });
+      res.send(result);
+    });
+
+    // to update likes count of meal data in the database
+    app.patch("/appointment/:id", async (req, res) => {
+      const id = req.params.id;
+      const appData = req.body;
+
+      console.log({ id, appData });
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "approved",
+        },
+      };
+      const result = await appointmentCollection.updateOne(query, updateDoc);
+
+      let subject = "Your Lawyer Approved the Appointment";
+      let message = "";
+
+      if (appData?.consultationType === "free") {
+        message = `
+        Dear ${appData?.userName} ,
+        
+        Your appointment with the lawyer has been approved for a **Free Consultation**. 
+        This consultation will take place via a phone call or an online meeting. 
+
+        **Details:**
+        - **Date and Time:** 12/01/2025 | 09:30 PM
+        - "Meet Link: https://meet.google.com/jit-bvui-hwu"
+        - "Phone: +01723332211"
+        Best regards,  
+        Lawace: Lawyer Appointment System
+      `;
+      }
+      if (appData?.consultationType === "online") {
+        message = `   
+        Dear ${appData?.userName} ,
+
+        Your appointment with the lawyer has been approved for an **Online Consultation**. 
+        Please join the meeting using the link below at the scheduled time. 
+
+        **Details:**
+        - **Date and Time:** 12/01/2025 | 09:30 PM
+        - **Meet Link:** https://meet.google.com/jit-bvui-hwu,
+        - **Charge:** $50 (to be paid online)
+
+        Best regards,  
+        Lawace(Lawyer Appointment System)`;
+      }
+      if (appData?.consultationType === "offline") {
+        message = `   
+        Dear ${appData?.userName} ,
+ Your appointment with the lawyer has been approved for an **Offline Consultation**. 
+        Please visit the lawyer's office at the scheduled time.
+
+       **Details:**
+        - **Date and Time:** 12/01/2025 | 09:30 PM
+        - **Meet Link:** https://meet.google.com/jit-bvui-hwu,
+        - **Charge:** $100 (to be paid at the office)
+
+        Best regards,  
+        Lawyer Appointment System`;
+      }
+
+      sendEmail(appData?.userEmail, {
+        subject: subject,
+        message: message,
+      });
+
       res.send(result);
     });
 
