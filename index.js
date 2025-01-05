@@ -466,7 +466,14 @@ async function run() {
     // Create appointment
     app.post("/appointments", upload.single("documents"), async (req, res) => {
       try {
-        const { subject, message, lawyerEmail, userName, userEmail } = req.body;
+        const { 
+          subject, 
+          message, 
+          lawyerEmail, 
+          userName, 
+          userEmail,
+          consultationType
+        } = req.body;
 
         const appointment = {
           lawyerEmail,
@@ -474,10 +481,13 @@ async function run() {
           userEmail,
           subject,
           message,
+          consultationType,
           documentUrl: req.file
             ? `/uploads/documents/${req.file.filename}`
             : null,
+          status: 'pending'
         };
+        
         await appointmentCollection.insertOne(appointment);
 
         res.status(201).json({
