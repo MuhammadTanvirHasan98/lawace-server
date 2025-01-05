@@ -94,8 +94,18 @@ async function run() {
       res.send(result);
     });
 
+    // get all appointments data for a specific lawyer from database
+    app.get("/appointments/:email", async (req, res) => {
+      const lawyerEmail = req.params.email;
+      console.log(lawyerEmail);
+      const result = await appointmentCollection
+        .find({ lawyerEmail })
+        .toArray();
+      res.send(result);
+    });
+
     // get a single lawyer info for lawyer details page from database
-    app.get("/lawyer/:id", async (req, res) => {
+    app.get("/lawyers/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await lawyerCollection.findOne(query);
@@ -110,7 +120,7 @@ async function run() {
     });
 
     // Add or Update new or existing lawyer to the database
-    app.put("/lawyer/:email?", async (req, res) => {
+    app.put("/lawyer/:email", async (req, res) => {
       const email = req.params.email;
       const lawyerProfile = req.body;
       console.log("Lawyer Info:", { lawyerProfile, email });
@@ -466,13 +476,13 @@ async function run() {
     // Create appointment
     app.post("/appointments", upload.single("documents"), async (req, res) => {
       try {
-        const { 
-          subject, 
-          message, 
-          lawyerEmail, 
-          userName, 
+        const {
+          subject,
+          message,
+          lawyerEmail,
+          userName,
           userEmail,
-          consultationType
+          consultationType,
         } = req.body;
 
         const appointment = {
@@ -485,9 +495,9 @@ async function run() {
           documentUrl: req.file
             ? `/uploads/documents/${req.file.filename}`
             : null,
-          status: 'pending'
+          status: "pending",
         };
-        
+
         await appointmentCollection.insertOne(appointment);
 
         res.status(201).json({
