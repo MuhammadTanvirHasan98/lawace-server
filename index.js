@@ -67,6 +67,14 @@ async function run() {
       res.send(result);
     });
 
+    // get a single lawyer info for lawyer details page from database
+    app.get("/lawyer/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await lawyerCollection.findOne(query);
+      res.send(result);
+    });
+
     // get a lawyer info by email from database
     app.get("/lawyer/:email", async (req, res) => {
       const lawyer_email = req.params.email;
