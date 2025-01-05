@@ -2,6 +2,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
@@ -22,6 +24,29 @@ const client = new MongoClient(uri, {
   },
 });
 
+// Configure multer for file upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/documents");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type"));
+    }
+  },
+});
+
 async function run() {
   try {
     const db = client.db("lawaceDB");
@@ -34,6 +59,7 @@ async function run() {
     const reviewCollection = db.collection("reviews");
     const userPackageCollection = db.collection("userPackages");
     const ratingCollection = db.collection("ratings");
+    const appointmentCollection = db.collection("appointments");
 
     // ********** Users Related API *********//
     // get a user info by email from db
@@ -377,34 +403,39 @@ async function run() {
     });
 
     // Add endpoint to check if user has already rated
-    app.get('/ratings/:lawyerId/:userId', async (req, res) => {
+    app.get("/ratings/:lawyerId/:userId", async (req, res) => {
       try {
         const { lawyerId, userId } = req.params;
-        
+
         const existingRating = await ratingCollection.findOne({
           lawyerId,
-          userId
+          userId,
         });
 
-        res.json({ hasRated: !!existingRating, rating: existingRating?.rating || 0 });
+        res.json({
+          hasRated: !!existingRating,
+          rating: existingRating?.rating || 0,
+        });
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
     // Modify the existing ratings endpoint to store user ratings
-    app.post('/ratings', async (req, res) => {
+    app.post("/ratings", async (req, res) => {
       try {
         const { lawyerId, userId, rating } = req.body;
-        
+
         // Check if user has already rated
         const existingRating = await ratingCollection.findOne({
           lawyerId,
-          userId
+          userId,
         });
 
         if (existingRating) {
-          return res.status(400).json({ error: 'User has already rated this lawyer' });
+          return res
+            .status(400)
+            .json({ error: "User has already rated this lawyer" });
         }
 
         // Store the rating
@@ -412,7 +443,7 @@ async function run() {
           lawyerId,
           userId,
           rating,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
 
         // Update lawyer's total rating
@@ -421,14 +452,45 @@ async function run() {
           {
             $inc: {
               totalRating: rating,
-              ratingCount: 1
-            }
+              ratingCount: 1,
+            },
           }
         );
 
         res.json(result);
       } catch (error) {
         res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Create appointment
+    app.post("/appointments", upload.single("documents"), async (req, res) => {
+      try {
+        const { subject, message, lawyerEmail, userName, userEmail } = req.body;
+
+        const appointment = {
+          lawyerEmail,
+          userName,
+          userEmail,
+          subject,
+          message,
+          documentUrl: req.file
+            ? `/uploads/documents/${req.file.filename}`
+            : null,
+        };
+        await appointmentCollection.insertOne(appointment);
+
+        res.status(201).json({
+          success: true,
+          message: "Appointment request created successfully",
+          appointment,
+        });
+      } catch (error) {
+        console.error("Appointment creation error:", error);
+        res.status(500).json({
+          success: false,
+          message: "Error creating appointment request",
+        });
       }
     });
 
