@@ -32,7 +32,7 @@ const sendEmail = (emailAddress, emailData) => {
   });
 
   const mailBody = {
-    from: `"Lawace" <${process.env.TRANSPORTER_EMAIL}>`, // sender address
+    from: `"My Legal Advisor" <${process.env.TRANSPORTER_EMAIL}>`, // sender address
     to: emailAddress, // list of receivers
     subject: emailData.subject, // Subject line
     html: emailData.message, // html body
@@ -51,7 +51,7 @@ const sendEmail = (emailAddress, emailData) => {
 app.use(cors());
 app.use(express.json());
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@muhammadcluster.h7migjc.mongodb.net/?retryWrites=true&w=majority&appName=MuhammadCluster`;
+const uri = `mongodb+srv://Ovi_Anjon:26062001@ovicluster.6wlv0.mongodb.net/?retryWrites=true&w=majority&appName=OviCluster`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -171,7 +171,7 @@ async function run() {
       };
       const result = await appointmentCollection.updateOne(query, updateDoc);
 
-      let subject = "Your Lawyer Approved the Appointment";
+      let subject = `Lawyer ${appData?.lawyerName} Approved the Appointment`;
       let message = "";
 
       if (appData?.consultationType === "free") {
@@ -186,7 +186,7 @@ async function run() {
         - "Meet Link: https://meet.google.com/jit-bvui-hwu"
         - "Phone: +01723332211"
         Best regards,  
-        Lawace: Lawyer Appointment System
+        My Legal Advisor: Lawyer Appointment System
       `;
       }
       if (appData?.consultationType === "online") {
@@ -202,7 +202,7 @@ async function run() {
         - **Charge:** $50 (to be paid online)
 
         Best regards,  
-        Lawace(Lawyer Appointment System)`;
+        My Legal Advisor`;
       }
       if (appData?.consultationType === "offline") {
         message = `   
@@ -403,6 +403,7 @@ async function run() {
           subject,
           message,
           lawyerEmail,
+          lawyerName,
           userName,
           userEmail,
           consultationType,
@@ -410,6 +411,7 @@ async function run() {
 
         const appointment = {
           lawyerEmail,
+          lawyerName,
           userName,
           userEmail,
           subject,
@@ -450,9 +452,9 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Lawace server is running here!");
+  res.send("My Legal Advisor server is running here!");
 });
 
 app.listen(port, () => {
-  console.log(`My Lawace app is listening on port: ${port}`);
+  console.log(`My My Legal Advisor app is listening on port: ${port}`);
 });
