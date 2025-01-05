@@ -33,6 +33,7 @@ async function run() {
     const requestedMealCollection = db.collection("requestedMeals");
     const reviewCollection = db.collection("reviews");
     const userPackageCollection = db.collection("userPackages");
+    const ratingCollection = db.collection("ratings");
 
     // ********** Users Related API *********//
     // get a user info by email from db
@@ -373,6 +374,62 @@ async function run() {
       await allBlogCollection.updateOne(filter, options);
       const result = await reviewCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // Add endpoint to check if user has already rated
+    app.get('/ratings/:lawyerId/:userId', async (req, res) => {
+      try {
+        const { lawyerId, userId } = req.params;
+        
+        const existingRating = await ratingCollection.findOne({
+          lawyerId,
+          userId
+        });
+
+        res.json({ hasRated: !!existingRating, rating: existingRating?.rating || 0 });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Modify the existing ratings endpoint to store user ratings
+    app.post('/ratings', async (req, res) => {
+      try {
+        const { lawyerId, userId, rating } = req.body;
+        
+        // Check if user has already rated
+        const existingRating = await ratingCollection.findOne({
+          lawyerId,
+          userId
+        });
+
+        if (existingRating) {
+          return res.status(400).json({ error: 'User has already rated this lawyer' });
+        }
+
+        // Store the rating
+        await ratingCollection.insertOne({
+          lawyerId,
+          userId,
+          rating,
+          timestamp: new Date()
+        });
+
+        // Update lawyer's total rating
+        const result = await lawyerCollection.updateOne(
+          { _id: new ObjectId(lawyerId) },
+          {
+            $inc: {
+              totalRating: rating,
+              ratingCount: 1
+            }
+          }
+        );
+
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
     });
 
     // Send a ping to confirm a successful connection
