@@ -85,6 +85,9 @@ const upload = multer({
   },
 });
 
+// Serve all uploaded files statically from any subfolder
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 async function run() {
   try {
     const db = client.db("lawaceDB");
