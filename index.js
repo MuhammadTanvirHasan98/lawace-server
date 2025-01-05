@@ -145,7 +145,9 @@ async function run() {
       const search = req.query.search;
       let query = {};
       if (search) {
-        query.blog_title = { $regex: search, $options: "i" };
+        query = {
+          blog_title: { $regex: search, $options: "i" },
+        };
       }
       const result = await allBlogCollection.find(query).toArray();
       res.send(result);
@@ -164,20 +166,37 @@ async function run() {
     app.post("/blog", async (req, res) => {
       const blogInfo = req.body;
       console.log(blogInfo);
-      const result = await allBlogCollection.insertOne(blogInfo);
+      const result = await allBlogCollection.insertOne({
+        ...blogInfo,
+        isActive: false,
+      });
       res.send(result);
     });
 
     // to update likes count of meal data in the database
     app.patch("/blog/:id", async (req, res) => {
       const id = req.params.id;
+      const { isActive } = req.body;
       const query = { _id: new ObjectId(id) };
       const options = {
-        $inc: { like: 1 },
+        $set: { isActive },
       };
+      if (!isActive) {
+        options.$inc = { like: 1 };
+      }
       const result = await allBlogCollection.updateOne(query, options);
       res.send(result);
     });
+
+    // Delete a blog from database
+    app.delete("/blog/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("Delete blog id:", id);
+      const query = { _id: new ObjectId(id) };
+      const result = await allBlogCollection.deleteOne(query);
+      res.send(result);
+    });
+
     //****** Blogs API Ends here *******//
 
     // ---------- Comments related API ---------- //
