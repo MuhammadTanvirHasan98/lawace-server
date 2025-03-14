@@ -51,7 +51,7 @@ const sendEmail = (emailAddress, emailData) => {
 app.use(cors());
 app.use(express.json());
 
-const uri = `mongodb+srv://Ovi_Anjon:26062001@ovicluster.6wlv0.mongodb.net/?retryWrites=true&w=majority&appName=OviCluster`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@muhammadcluster.h7migjc.mongodb.net/?retryWrites=true&w=majority&appName=MuhammadCluster`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -86,7 +86,7 @@ const upload = multer({
 });
 
 // Serve all uploaded files statically from any subfolder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 async function run() {
   try {
@@ -96,9 +96,6 @@ async function run() {
     const userCollection = db.collection("users");
     const lawyerCollection = db.collection("lawyers");
     const allCommentCollection = db.collection("comments");
-    const requestedMealCollection = db.collection("requestedMeals");
-    const reviewCollection = db.collection("reviews");
-    const userPackageCollection = db.collection("userPackages");
     const ratingCollection = db.collection("ratings");
     const appointmentCollection = db.collection("appointments");
 
@@ -122,7 +119,9 @@ async function run() {
       if (existUser) {
         return res.send({ message: "User already exists!", insertedId: null });
       }
+
       const result = await userCollection.insertOne(user);
+      console.log("User added to the database:", result);
       res.send(result);
     });
 
